@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Customer List</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css">
+    <link rel="stylesheet" type="text/css" href="path/to/jquery.dataTables.css">
+    <script src="https://code.jquery.com/jquery-3.7.0.slim.js" integrity="sha256-7GO+jepT9gJe9LB4XFf8snVOjX3iYNb0FHYr5LI1N5c=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/umd/simple-datatables.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="path/to/jquery.js"></script>
+    <script src="path/to/jquery.dataTables.js"></script>
+
+
+</head>
+<style> /* CSS styles */
+    body {
+        background: linear-gradient(65deg, rgb(181, 41, 231), rgb(0, 0, 255), rgb(23, 120, 242));
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-content: center;
+        height: 100vh;
+        margin: 0;
+    }
+    h1 {
+        text-align: center;
+        }
+
+    h2 {
+        text-align: center;
+        }
+    
+    .container {
+        width: 80%;
+        text-align: left; /* Added */
+    
+    }
+
+    table, th, td {
+          border:1px solid black;
+          max-width: auto;
+          margin: auto;
+          text-align: center;
+          table-layout: auto;
+          
+    }
+     
+    a:link, a:visited {
+          border-radius: 10px;
+          background-color: #f44336;
+          color: white;
+          padding: 7px 25px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+   }
+
+   a:hover, a:active {
+          background-color: red;
+   }
+    
+       
+    .edit-button {
+        background-color: #7EB900;
+        color: white;
+      }
+
+      .delete-button {
+        background-color: #D04423;
+        color: white;
+   }
+    
+    .deleteButton{
+        background-color: #D04423;
+        color: white;
+   }
+     
+    
+    .print-excel {
+        background-color: steelblue;
+        color: white;
+   }
+    
+    
+    .save-excel {
+        background-color: RGB(29, 111, 66);
+        color: white;
+   }
+    
+    
+       .custom-file-input {
+      /* Set the desired background color */
+      background-color: linear-gradient(65deg, rgb(181, 41, 231), rgb(0, 0, 255));
+      /* Set the desired text color */
+      color: white;
+      /* Add any additional styling as needed */
+      /* ... */
+    }    
+    
+       footer {
+        background-color: linear-gradient(65deg, rgb(181, 41, 231), rgb(0, 0, 255));
+        padding: 10px;
+        text-align: center;
+        font-size: 12px;
+  }    
+       
+    
+</style>    
+    
+<body ng-controller="CustomerController">
+    <div class="container">
+    
+	<h1 style="margin-top: 0; ">Daily Tracker 4.5</h1>
+	<form>
+		<h2>Import List</h2>
+	
+            <input type="file" id="excelFile" accept=".xlsx, .xls" class="custom-file-input" />
+
+
+            <h1>Input Form:</h1>
+            <label for="customeDropdown">Customer List:</label>
+            <select id="customerDropdown"></select>
+            
+
+            <script>
+                document.getElementById('excelFile').addEventListener('change', handleFileSelect, false);
+
+                function handleFileSelect(evt) {
+                    var files = evt.target.files; // Get selected file(s)
+
+                    if (files.length === 0) return;
+
+                    var file = files[0]; // Assume only one file is selected
+
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        var data = new Uint8Array(e.target.result);
+                        var workbook = XLSX.read(data, { type: 'array' });
+
+                        // Assuming the customer data is in the first sheet, first column (A)
+                        var worksheet = workbook.Sheets[workbook.SheetNames[0]];
+
+                        var customers = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+
+                        // Assuming the customer names are in the first column (A)
+                        var customerNames = customers.map(function (row) {
+                            return row[0];
+                        });
+
+                        // Populate the dropdown menu options
+                        var dropdown = document.getElementById('customerDropdown');
+                        customerNames.forEach(function (name) {
+                            var option = document.createElement('option');
+                            option.text = name;
+                            dropdown.add(option);
+                        });
+                    };
+
+                    reader.readAsArrayBuffer(file);
+                }
+        </script>
+                       
+
+        <br><br>
+		
+		<label for="disposition">Disposition:</label>
+		<select id="disposition" name="disposition">
+			<option value="not contacted">Not Contacted</option>
+			<option value="contacted">Contacted</option>
+			<option value="not interested">Not Interested</option>
+			<option value="interested">Interested</option>
+			<option value="follow up">Follow Up</option>
+		</select><br><br>
+
+		<label for="remark">Remark:</label>
+        <input type="text" id="remark" name="remark"><br><br>
+		
+        <label for="telephone">Telephone*</label>
+        <input type="tel" id="telephone" name="telephone"><br><br>
+        
+		<input type="button" value="Submit" onclick="updateList()">
+        <button id="deleteButton" onclick="deleteEntry()">Delete</button>
+	</form>
+	
+     
+	<h2>Output List:</h2>
+        <div style="overflow-x:auto;">
+         <!-- Table headers -->
+	<table id="customerTable">
+		<thead>
+			<tr id="row1"> <!-- Table header columns -->
+			<tr id="row1"> <!-- Table header columns -->
+                <th></th> <!-- Delete button column -->
+                <th data-simpledatatable-sortable>Customer</th>
+				<th data-simpledatatable-sortable>Disposition</th>
+                <th data-simpledatatable-sortable>Date</th>  
+				<th data-simpledatatable-sortable>Time</th>
+				<th data-simpledatatable-sortable>Remark</th>
+                <th data-simpledatatable-sortable>Telephone</th>
+                <th data-simpledatatable-sortable>Country</th> <!-- New Column -->
+                <th data-simpledatatable-sortable>Zone Time</th> <!-- New Column -->
+                
+			</tr>
+		</thead>
+		<tbody id="customerList">
+			<tr>   <!-- Table body rows -->
+                <td>
+                    <button class="edit-button" onclick="updateRow(this)">Edit</button>
+                    <button class="cancel-button" onclick="cancelEdit(this)" style="display: none;">Cancel</button>
+                    <button class="save-button" onclick="saveRow(this)" style="display: none;">Save</button>
+                    
+                </td> <!-- Delete button column -->
+                <td class="editable-cell">Customer 1</td>
+                <td class="editable-cell">Completed</td>
+                <td class="editable-cell">2023-04-21</td>
+                <td class="editable-cell">10:30 AM</td>
+                <td class="editable-cell">Advertiser was in Bathroom</td>
+                <td class="editable-cell">+921234567890</td> <!-- Example country code -->
+                <td class="editable-cell">Pakistan</td> <!-- Example country code -->
+                <td class="editable-cell">Asia/Karachi</td> <!-- Example current timezone -->
+                <td>
+                    
+                    <button class="delete-button" onclick="deleteRow(this)">Delete</button>
+                </td>
+            </tr>
+			<!-- Add the rest of the customers here -->
+			<tr>
+                <td>
+                    <button class="edit-button" onclick="updateRow(this)">Edit</button>
+                    <button class="cancel-button" onclick="cancelEdit(this)" style="display: none;">Cancel</button>
+                    <button class="save-button" onclick="saveRow(this)" style="display: none;">Save</button>
+                    
+                </td> <!-- Delete button column -->
+				<td class="editable-cell">Customer 150</td>
+				<td class="editable-cell">Interested</td>
+				<td class="editable-cell">May 13, 2023</td>
+				<td class="editable-cell">3:45:00 PM</td>
+                <td class="editable-cell">Call and Pitched 1</td>
+                <td class="editable-cell">+633435435632</td>
+                <td class="editable-cell">Philippines</td> <!-- Example country code -->
+                <td class="editable-cell">Asia/Manila</td> <!-- Example current timezone -->
+                <td>
+                    
+                    <button class="delete-button" onclick="deleteRow(this)">Delete</button>
+                </td>
+				
+			</tr>
+		</tbody>
+	</table>
+            
+    <script>
+      var customerTable = new simpleDatatables.DataTable("#customerTable");
+
+      // Add filters to each column
+      customerTable.on("datatable.init", function () {
+        var table = this;
+        var headers = table.originalTHead.querySelectorAll("th");
+
+        Array.prototype.forEach.call(headers, function (header, index) {
+          var filterInput = document.createElement("input");
+          filterInput.type = "text";
+          filterInput.classList.add("filter-input");
+          filterInput.addEventListener("input", function () {
+            table.search(this.value.trim(), index);
+          });
+
+          header.appendChild(filterInput);
+        });
+      });
+    </script>
+        
+            
+            <!-- Create New button -->
+                    <button onclick="createNewRow()">Create New</button>
+             
+            
+</div>
+<script>
+                
+                // Initialize the DataTable
+                $(document).ready(function() {
+                    $('#customerTable').DataTable();
+                });
+
+                // Update the DataTable when adding a new row
+                function updateList() {
+                    // ... updateList code ...
+
+                // Refresh the DataTable after updating the list
+                    customerTable.destroy();
+                    customerTable = new simpleDatatables.DataTable("#customerTable");
+                }
+ </script>        
+        
+            <!-- Create Save Print Excel button -->
+    
+    <br>
+
+                            <button class="print-excel" onclick="printExcel()">Print to Excel</button>
+                            <button class="save-excel" onclick="saveExcel()">Save as Excel</button>
+
+
+    <br><br>
+            
+    // Initialize the DataTable    
+	
+	<script> 
+        function updateList() {
+                var dropdown = document.getElementById("customerDropdown");
+                var customer = dropdown.value;
+                var disposition = document.getElementById("disposition").value;
+                var remark = document.getElementById("remark").value;
+                var telephone = document.getElementById("telephone").value;
+                var now = new Date();
+                var options = { month: 'long', day: 'numeric', year: 'numeric' };
+                var date = now.toLocaleDateString('en-US', options);
+                var time = now.toLocaleTimeString('en-US');
+                var dateTime = date + ', ' + time;
+                var countryCode = ''; // Placeholder for country code
+                var timeZone = ''; // Placeholder for time zone
+                fetchCountryCodeAndTimeZone(telephone, function (code, zone) {
+                    countryCode = code;
+                    timeZone = zone;
+                    var table = document.getElementById("customerList");
+                    var row = table.insertRow(0);
+                    var cell1 = row.insertCell(0);
+                    var cell2 = row.insertCell(1);
+                    var cell3 = row.insertCell(2);
+                    var cell4 = row.insertCell(3);
+                    var cell5 = row.insertCell(4);
+                    var cell6 = row.insertCell(5);
+                    var cell7 = row.insertCell(6); // New cell for 
+                    var cell8 = row.insertCell(7); // New cell for country code
+                    var cell9 = row.insertCell(8); // New cell for time zone
+                    var cell10 = row.insertCell(9); // New cell for delete button
+                    
+                    // Insert the edit button
+                    cell1.innerHTML = '<button class="edit-button" onclick="updateRow(this)">Edit</button> \
+                                      <button class="cancel-button" onclick="cancelEdit(this)" style="display: none;">Cancel</button> \
+                                      <button class="save-button" onclick="saveRow(this)" style="display: none;">Save</button>';
+                                     
+                     // Make cells editable
+                    cell2.innerHTML = customer;
+                    cell3.innerHTML = disposition;
+                    cell4.innerHTML = date;
+                    cell5.innerHTML = time;
+                    cell6.innerHTML = remark;
+
+                    // Replace "crm-dialer-url" with the actual URL of your CRM dialer
+                    cell7.innerHTML = '<a href="crm-dialer-url?number=' + telephone + '">' + telephone + '</a>';
+                    cell8.innerHTML = countryCode; // Display country code
+                    cell9.innerHTML = now.toLocaleString('en-US', { timeZone: timeZone }); // Display current time in the time zone
+                    cell10.innerHTML = '<button class="deleteButton" onclick="deleteRow(this)">Delete</button>'; // Insert the delete button
+
+                    document.getElementById("customerDropdown").value = "";
+                    document.getElementById("remark").value = "";
+                    document.getElementById("customerDropdown").focus();
+                  });
+
+                  // Remove the last row if there are more than 151 rows
+                  var table = document.getElementById("customerList");
+                  if (table.rows.length > 151) {
+                    table.deleteRow(table.rows.length - 1);
+                  }
+                }
+        
+                function editRow(button) {
+                    var row = button.parentNode.parentNode;
+                    var cells = row.getElementsByTagName("td");
+
+                    for (var i = 1; i < cells.length - 1; i++) {
+                        var cell = cells[i];
+                        var value = cell.innerText;
+                        cell.innerHTML = value;
+                    }
+
+                    var editButton = row.querySelector(".edit-button");
+                    var deleteButton = row.querySelector(".delete-button");
+                    var saveButton = document.createElement("button");
+                    saveButton.className = "save-button";
+                    saveButton.innerHTML = "Save";
+                    saveButton.onclick = function () {
+                        saveRow(this);
+                    };
+
+                    var cancelButton = document.createElement("button");
+                    cancelButton.className = "cancel-button";
+                    cancelButton.innerHTML = "Cancel";
+                    cancelButton.onclick = function () {
+                        cancelEdit(this);
+                    };
+
+                    row.replaceChild(saveButton, editButton);
+                    row.replaceChild(cancelButton, deleteButton);
+                }
+
+
+                function deleteRow(button) {
+                  var row = button.parentNode.parentNode;
+                  row.parentNode.removeChild(row);
+                }
+                
+                function updateRow(button) {
+                  var row = button.parentNode.parentNode;
+                  var cells = row.getElementsByTagName('td');
+
+                  for (var i = 1; i < cells.length - 1; i++) {
+                    var cell = cells[i];
+                    var value = cell.querySelector('input').value;
+                    cell.innerHTML = value;
+                  }
+
+                  var editButton = row.querySelector('.edit-button');
+                  var cancelButton = row.querySelector('.cancel-button');
+                  var saveButton = row.querySelector('.save-button');
+
+                  editButton.style.display = 'none';
+                  cancelButton.style.display = 'inline-block';
+                  saveButton.style.display = 'inline-block';
+                }
+
+                function cancelEdit(button) {
+                  var row = button.parentNode.parentNode;
+                  var cells = row.getElementsByTagName('td');
+
+                  for (var i = 1; i < cells.length - 1; i++) {
+                    var cell = cells[i];
+                    var value = cell.querySelector('input').value;
+                    cell.innerHTML = value;
+                  }
+
+                  var editButton = row.querySelector('.edit-button');
+                  var cancelButton = row.querySelector('.cancel-button');
+                  var saveButton = row.querySelector('.save-button');
+
+                  editButton.style.display = 'inline-block';
+                  cancelButton.style.display = 'none';
+                  saveButton.style.display = 'none';
+                }
+
+                function saveRow(button) {
+                    var row = button.parentNode.parentNode;
+                    var cells = row.getElementsByTagName("td");
+
+                    for (var i = 1; i < cells.length - 1; i++) {
+                        var cell = cells[i];
+                        var input = cell.firstChild;
+                        var value = input.value;
+                        cell.removeChild(input);
+                        cell.innerText = value;
+                    }
+
+                    var editButton = document.createElement("button");
+                    editButton.className = "edit-button";
+                    editButton.innerHTML = "Edit";
+                    editButton.onclick = function () {
+                        editRow(this);
+                    };
+
+                    var deleteButton = document.createElement("button");
+                    deleteButton.className = "delete-button";
+                    deleteButton.innerHTML = "Delete";
+                    deleteButton.onclick = function () {
+                        deleteRow(this);
+                    };
+
+                    row.replaceChild(editButton, button);
+                    row.replaceChild(deleteButton, row.lastChild);
+                }
+
+        
+                function updateRow(button) {
+                  var tableRow = button.parentNode.parentNode;
+
+                  // Hide update button
+                  button.style.display = 'none';
+
+                  // Show cancel button and save button
+                  tableRow.querySelector('.cancel-button').style.display = 'inline-block';
+                  tableRow.querySelector('.save-button').style.display = 'inline-block';
+
+                  // Replace text cells with input elements
+                  var cells = tableRow.cells;
+
+                  for (var i = 0; i < cells.length; i++) {
+                    var cell = cells[i];
+                    if (cell.classList.contains('editable-cell')) {
+                      var originalValue = cell.textContent;
+                      var input = document.createElement('input');
+                      input.type = 'text';
+                      input.value = originalValue;
+                      cell.textContent = '';
+                      cell.appendChild(input);
+                    }
+                  }
+                }
+
+
+                                   
+    
+        // Dummy function to fetch country code and current time based on the ISD code
+            function fetchCountryCodeAndTimeZone(telephone, callback) {
+                // Example implementation
+                // Replace this with your own implementation to fetch the actual country code and current time
+
+                // Extract the ISD code from the telephone number (assuming it is in parentheses)
+                var startIndex = telephone.indexOf('(');
+                var endIndex = telephone.indexOf(')');
+                var isdCode = telephone.substring(startIndex + 1, endIndex);
+
+                if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+                    console.log("Invalid ISD code format");
+                    return;
+                }
+
+                console.log("ISD code: " + isdCode);
+
+                // Dummy data for country code and current time based on the ISD code
+                var countryCode = ''; // Placeholder for country code
+                var localTime = ''; // Placeholder for current time
+
+                // Dummy mapping of ISD codes to country code and current time
+                var isdCodeMappings = {
+
+                      '+93': { code: 'AF', zone: 'Asia/Kabul' }, // Afghanistan
+                      '+355': { code: 'AL', zone: 'Europe/Tirane' }, // Albania
+                      '+213': { code: 'DZ', zone: 'Africa/Algiers' }, // Algeria
+                      '+1684': { code: 'AS', zone: 'Pacific/Pago_Pago' }, // American Samoa
+                      '+376': { code: 'AD', zone: 'Europe/Andorra' }, // Andorra
+                      '+244': { code: 'AO', zone: 'Africa/Luanda' }, // Angola
+                      '+1264': { code: 'AI', zone: 'America/Anguilla' }, // Anguilla
+                      '+1268': { code: 'AG', zone: 'America/Antigua' }, // Antigua and Barbuda
+                      '+54': { code: 'AR', zone: 'America/Argentina/Buenos_Aires' }, // Argentina
+                      '+374': { code: 'AM', zone: 'Asia/Yerevan' }, // Armenia
+                      '+297': { code: 'AW', zone: 'America/Aruba' }, // Aruba
+                      '+61': { code: 'AU', zone: 'Australia/Sydney' }, // Australia
+                      '+43': { code: 'AT', zone: 'Europe/Vienna' }, // Austria
+                      '+994': { code: 'AZ', zone: 'Asia/Baku' }, // Azerbaijan
+                      '+1242': { code: 'BS', zone: 'America/Nassau' }, // Bahamas
+                      '+973': { code: 'BH', zone: 'Asia/Bahrain' }, // Bahrain
+                      '+880': { code: 'BD', zone: 'Asia/Dhaka' }, // Bangladesh
+                      '+1246': { code: 'BB', zone: 'America/Barbados' }, // Barbados
+                      '+375': { code: 'BY', zone: 'Europe/Minsk' }, // Belarus
+                      '+32': { code: 'BE', zone: 'Europe/Brussels' }, // Belgium
+                      '+501': { code: 'BZ', zone: 'America/Belize' }, // Belize
+                      '+229': { code: 'BJ', zone: 'Africa/Porto-Novo' }, // Benin
+                      '+1441': { code: 'BM', zone: 'Atlantic/Bermuda' }, // Bermuda
+                      '+975': { code: 'BT', zone: 'Asia/Thimphu' }, // Bhutan
+                      '+591': { code: 'BO', zone: 'America/La_Paz' }, // Bolivia
+                      '+387': { code: 'BA', zone: 'Europe/Sarajevo' }, // Bosnia and Herzegovina
+                      '+267': { code: 'BW', zone: 'Africa/Gaborone' }, // Botswana
+                      '+55': { code: 'BR', zone: 'America/Sao_Paulo' }, // Brazil
+                      '+246': { code: 'IO', zone: 'Indian/Chagos' }, // British Indian Ocean Territory
+                      '+1284': { code: 'VG', zone: 'America/Tortola' }, // British Virgin Islands
+                      '+673': { code: 'BN', zone: 'Asia/Brunei' }, // Brunei Darussalam
+                      '+359': { code: 'BG', zone: 'Europe/Sofia' }, // Bulgaria
+                      '+226': { code: 'BF', zone: 'Africa/Ouagadougou' }, // Burkina Faso
+                      '+257': { code: 'BI', zone: 'Africa/Bujumbura' }, // Burundi
+                      '+855': { code: 'KH', zone: 'Asia/Phnom_Penh' }, // Cambodia
+                      '+237': { code: 'CM', zone: 'Africa/Douala' }, // Cameroon
+                      '+1': { code: 'CA', zone: 'America/Toronto' }, // Canada
+                      '+238': { code: 'CV', zone: 'Atlantic/Cape_Verde' }, // Cape Verde
+                      '+1345': { code: 'KY', zone: 'America/Cayman' }, // Cayman Islands
+                      '+236': { code: 'CF', zone: 'Africa/Bangui' }, // Central African Republic
+                      '+235': { code: 'TD', zone: 'Africa/Ndjamena' }, // Chad
+                      '+56': { code: 'CL', zone: 'America/Santiago' }, // Chile
+                      '+86': { code: 'CN', zone: 'Asia/Shanghai' }, // China
+                      '+57': { code: 'CO', zone: 'America/Bogota' }, // Colombia
+                      '+269': { code: 'KM', zone: 'Indian/Comoro' }, // Comoros
+                      '+243': { code: 'CD', zone: 'Africa/Kinshasa' }, // Congo (Kinshasa)
+                      '+242': { code: 'CG', zone: 'Africa/Brazzaville' }, // Congo (Brazzaville)
+                      '+682': { code: 'CK', zone: 'Pacific/Rarotonga' }, // Cook Islands
+                      '+506': { code: 'CR', zone: 'America/Costa_Rica' }, // Costa Rica
+                      '+225': { code: 'CI', zone: 'Africa/Abidjan' }, // Côte d'Ivoire
+                      '+385': { code: 'HR', zone: 'Europe/Zagreb' }, // Croatia
+                      '+53': { code: 'CU', zone: 'America/Havana' }, // Cuba
+                      '+599': { code: 'CW', zone: 'America/Curacao' }, // Curaçao
+                      '+357': { code: 'CY', zone: 'Asia/Nicosia' }, // Cyprus
+                      '+420': { code: 'CZ', zone: 'Europe/Prague' }, // Czech Republic
+                      '+45': { code: 'DK', zone: 'Europe/Copenhagen' }, // Denmark
+                      '+253': { code: 'DJ', zone: 'Africa/Djibouti' }, // Djibouti
+                      '+1767': { code: 'DM', zone: 'America/Dominica' }, // Dominica
+                      '+1': { code: 'DO', zone: 'America/Santo_Domingo' }, // Dominican Republic
+                      '+593': { code: 'EC', zone: 'America/Guayaquil' }, // Ecuador
+                      '+20': { code: 'EG', zone: 'Africa/Cairo' }, // Egypt
+                      '+503': { code: 'SV', zone: 'America/El_Salvador' }, // El Salvador
+                      '+240': { code: 'GQ', zone: 'Africa/Malabo' }, // Equatorial Guinea
+                      '+291': { code: 'ER', zone: 'Africa/Asmara' }, // Eritrea
+                      '+372': { code: 'EE', zone: 'Europe/Tallinn' }, // Estonia
+                      '+251': { code: 'ET', zone: 'Africa/Addis_Ababa' }, // Ethiopia
+                      '+500': { code: 'FK', zone: 'Atlantic/Stanley' }, // Falkland Islands (Malvinas)
+                      '+298': { code: 'FO', zone: 'Atlantic/Faroe' }, // Faroe Islands
+                      '+679': { code: 'FJ', zone: 'Pacific/Fiji' }, // Fiji
+                      '+358': { code: 'FI', zone: 'Europe/Helsinki' }, // Finland
+                      '+33': { code: 'FR', zone: 'Europe/Paris' }, // France
+                      '+689': { code: 'PF', zone: 'Pacific/Tahiti' }, // French Polynesia
+                      '+241': { code: 'GA', zone: 'Africa/Libreville' }, // Gabon
+                      '+220': { code: 'GM', zone: 'Africa/Banjul' }, // Gambia
+                      '+995': { code: 'GE', zone: 'Asia/Tbilisi' }, // Georgia
+                      '+49': { code: 'DE', zone: 'Europe/Berlin' }, // Germany
+                      '+233': { code: 'GH', zone: 'Africa/Accra' }, // Ghana
+                      '+350': { code: 'GI', zone: 'Europe/Gibraltar' }, // Gibraltar
+                      '+30': { code: 'GR', zone: 'Europe/Athens' }, // Greece
+                      '+299': { code: 'GL', zone: 'America/Godthab' }, // Greenland
+                      '+1473': { code: 'GD', zone: 'America/Grenada' }, // Grenada
+                      '+1671': { code: 'GU', zone: 'Pacific/Guam' }, // Guam
+                      '+502': { code: 'GT', zone: 'America/Guatemala' }, // Guatemala
+                      '+44': { code: 'GG', zone: 'Europe/Guernsey' }, // Guernsey
+                      '+224': { code: 'GN', zone: 'Africa/Conakry' }, // Guinea
+                      '+245': { code: 'GW', zone: 'Africa/Bissau' }, // Guinea-Bissau
+                      '+592': { code: 'GY', zone: 'America/Guyana' }, // Guyana
+                      '+509': { code: 'HT', zone: 'America/Port-au-Prince' }, // Haiti
+                      '+504': { code: 'HN', zone: 'America/Tegucigalpa' }, // Honduras
+                      '+852': { code: 'HK', zone: 'Asia/Hong_Kong' }, // Hong Kong, SAR China
+                      '+36': { code: 'HU', zone: 'Europe/Budapest' }, // Hungary
+                      '+354': { code: 'IS', zone: 'Atlantic/Reykjavik' }, // Iceland
+                      '+91': { code: 'IN', zone: 'Asia/Kolkata' }, // India
+                      '+62': { code: 'ID', zone: 'Asia/Jakarta' }, // Indonesia
+                      '+98': { code: 'IR', zone: 'Asia/Tehran' }, // Iran, Islamic Republic of
+                      '+964': { code: 'IQ', zone: 'Asia/Baghdad' }, // Iraq
+                      '+353': { code: 'IE', zone: 'Europe/Dublin' }, // Ireland
+                      '+44': { code: 'IM', zone: 'Europe/Isle_of_Man' }, // Isle of Man
+                      '+972': { code: 'IL', zone: 'Asia/Jerusalem' }, // Israel
+                      '+39': { code: 'IT', zone: 'Europe/Rome' }, // Italy
+                      '+1876': { code: 'JM', zone: 'America/Jamaica' }, // Jamaica
+                      '+81': { code: 'JP', zone: 'Asia/Tokyo' }, // Japan
+                      '+44': { code: 'JE', zone: 'Europe/Jersey' }, // Jersey
+                      '+962': { code: 'JO', zone: 'Asia/Amman' }, // Jordan
+                      '+77': { code: 'KZ', zone: 'Asia/Almaty' }, // Kazakhstan
+                      '+254': { code: 'KE', zone: 'Africa/Nairobi' }, // Kenya
+                      '+686': { code: 'KI', zone: 'Pacific/Tarawa' }, // Kiribati
+                      '+965': { code: 'KW', zone: 'Asia/Kuwait' }, // Kuwait
+                      '+996': { code: 'KG', zone: 'Asia/Bishkek' }, // Kyrgyzstan
+                      '+856': { code: 'LA', zone: 'Asia/Vientiane' }, // Lao PDR
+                      '+371': { code: 'LV', zone: 'Europe/Riga' }, // Latvia
+                      '+961': { code: 'LB', zone: 'Asia/Beirut' }, // Lebanon
+                      '+266': { code: 'LS', zone: 'Africa/Maseru' }, // Lesotho
+                      '+231': { code: 'LR', zone: 'Africa/Monrovia' }, // Liberia
+                      '+218': { code: 'LY', zone: 'Africa/Tripoli' }, // Libya
+                      '+423': { code: 'LI', zone: 'Europe/Vaduz' }, // Liechtenstein
+                      '+370': { code: 'LT', zone: 'Europe/Vilnius' }, // Lithuania
+                      '+352': { code: 'LU', zone: 'Europe/Luxembourg' }, // Luxembourg
+                      '+853': { code: 'MO', zone: 'Asia/Macau' }, // Macao, SAR China
+                      '+389': { code: 'MK', zone: 'Europe/Skopje' }, // Macedonia, Republic of
+                      '+261': { code: 'MG', zone: 'Indian/Antananarivo' }, // Madagascar
+                      '+265': { code: 'MW', zone: 'Africa/Blantyre' }, // Malawi
+                      '+60': { code: 'MY', zone: 'Asia/Kuala_Lumpur' }, // Malaysia
+                      '+960': { code: 'MV', zone: 'Indian/Maldives' }, // Maldives
+                      '+223': { code: 'ML', zone: 'Africa/Bamako' }, // Mali
+                      '+356': { code: 'MT', zone: 'Europe/Malta' }, // Malta
+                      '+692': { code: 'MH', zone: 'Pacific/Kwajalein' }, // Marshall Islands
+                      '+596': { code: 'MQ', zone: 'America/Martinique' }, // Martinique
+                      '+222': { code: 'MR', zone: 'Africa/Nouakchott' }, // Mauritania
+                      '+230': { code: 'MU', zone: 'Indian/Mauritius' }, // Mauritius
+                      '+262': { code: 'YT', zone: 'Indian/Mayotte' }, // Mayotte
+                      '+52': { code: 'MX', zone: 'America/Mexico_City' }, // Mexico
+                      '+691': { code: 'FM', zone: 'Pacific/Chuuk' }, // Micronesia, Federated States of
+                      '+373': { code: 'MD', zone: 'Europe/Chisinau' }, // Moldova
+                      '+377': { code: 'MC', zone: 'Europe/Monaco' }, // Monaco
+                      '+976': { code: 'MN', zone: 'Asia/Ulaanbaatar' }, // Mongolia
+                      '+382': { code: 'ME', zone: 'Europe/Podgorica' }, // Montenegro
+                      '+1664': { code: 'MS', zone: 'America/Montserrat' }, // Montserrat
+                      '+212': { code: 'MA', zone: 'Africa/Casablanca' }, // Morocco
+                      '+258': { code: 'MZ', zone: 'Africa/Maputo' }, // Mozambique
+                      '+95': { code: 'MM', zone: 'Asia/Yangon' }, // Myanmar
+                      '+264': { code: 'NA', zone: 'Africa/Windhoek' }, // Namibia
+                      '+674': { code: 'NR', zone: 'Pacific/Nauru' }, // Nauru
+                      '+977': { code: 'NP', zone: 'Asia/Kathmandu' }, // Nepal
+                      '+31': { code: 'NL', zone: 'Europe/Amsterdam' }, // Netherlands
+                      '+687': { code: 'NC', zone: 'Pacific/Noumea' }, // New Caledonia
+                      '+64': { code: 'NZ', zone: 'Pacific/Auckland' }, // New Zealand
+                      '+505': { code: 'NI', zone: 'America/Managua' }, // Nicaragua
+                      '+227': { code: 'NE', zone: 'Africa/Niamey' }, // Niger
+                      '+234': { code: 'NG', zone: 'Africa/Lagos' }, // Nigeria
+                      '+683': { code: 'NU', zone: 'Pacific/Niue' }, // Niue
+                      '+672': { code: 'NF', zone: 'Pacific/Norfolk' }, // Norfolk Island
+                      '+850': { code: 'KP', zone: 'Asia/Pyongyang' }, // Korea (North)
+                      '+1670': { code: 'MP', zone: 'Pacific/Saipan' }, // Northern Mariana Islands
+                      '+47': { code: 'NO', zone: 'Europe/Oslo' }, // Norway
+                      '+968': { code: 'OM', zone: 'Asia/Muscat' }, // Oman
+                      '+92': { code: 'PK', zone: 'Asia/Karachi' }, // Pakistan
+                      '+680': { code: 'PW', zone: 'Pacific/Palau' }, // Palau
+                      '+970': { code: 'PS', zone: 'Asia/Gaza' }, // Palestinian Territory
+                      '+507': { code: 'PA', zone: 'America/Panama' }, // Panama
+                      '+675': { code: 'PG', zone: 'Pacific/Port_Moresby' }, // Papua New Guinea
+                      '+595': { code: 'PY', zone: 'America/Asuncion' }, // Paraguay
+                      '+51': { code: 'PE', zone: 'America/Lima' }, // Peru
+                      '+63': { code: 'PH', zone: 'Asia/Manila' }, // Philippines
+                      '+48': { code: 'PL', zone: 'Europe/Warsaw' }, // Poland
+                      '+351': { code: 'PT', zone: 'Europe/Lisbon' }, // Portugal
+                      '+1787': { code: 'PR', zone: 'America/Puerto_Rico' }, // Puerto Rico
+                      '+974': { code: 'QA', zone: 'Asia/Qatar' }, // Qatar
+                      '+262': { code: 'RE', zone: 'Indian/Reunion' }, // Réunion
+                      '+40': { code: 'RO', zone: 'Europe/Bucharest' }, // Romania
+                      '+7': { code: 'RU', zone: 'Asia/Novosibirsk' }, // Russian Federation
+                      '+250': { code: 'RW', zone: 'Africa/Kigali' }, // Rwanda
+                      '+590': { code: 'BL', zone: 'America/St_Barthelemy' }, // Saint Barthélemy
+                      '+290': { code: 'SH', zone: 'Atlantic/St_Helena' }, // Saint Helena
+                      '+1869': { code: 'KN', zone: 'America/St_Kitts' }, // Saint Kitts and Nevis
+                      '+1758': { code: 'LC', zone: 'America/St_Lucia' }, // Saint Lucia
+                      '+590': { code: 'MF', zone: 'America/Marigot' }, // Saint Martin (French part)
+                      '+508': { code: 'PM', zone: 'America/Miquelon' }, // Saint Pierre and Miquelon
+                      '+1784': { code: 'VC', zone: 'America/St_Vincent' }, // Saint Vincent and Grenadines
+                      '+685': { code: 'WS', zone: 'Pacific/Apia' }, // Samoa
+                      '+378': { code: 'SM', zone: 'Europe/San_Marino' }, // San Marino
+                      '+239': { code: 'ST', zone: 'Africa/Sao_Tome' }, // Sao Tome and Principe
+                      '+966': { code: 'SA', zone: 'Asia/Riyadh' }, // Saudi Arabia
+                      '+221': { code: 'SN', zone: 'Africa/Dakar' }, // Senegal
+                      '+381': { code: 'RS', zone: 'Europe/Belgrade' }, // Serbia
+                      '+248': { code: 'SC', zone: 'Indian/Mahe' }, // Seychelles
+                      '+232': { code: 'SL', zone: 'Africa/Freetown' }, // Sierra Leone
+                      '+65': { code: 'SG', zone: 'Asia/Singapore' }, // Singapore
+                      '+1721': { code: 'SX', zone: 'America/Lower_Princes' }, // Sint Maarten (Dutch part)
+                      '+421': { code: 'SK', zone: 'Europe/Bratislava' }, // Slovakia
+                      '+386': { code: 'SI', zone: 'Europe/Ljubljana' }, // Slovenia
+                      '+677': { code: 'SB', zone: 'Pacific/Guadalcanal' }, // Solomon Islands
+                      '+252': { code: 'SO', zone: 'Africa/Mogadishu' }, // Somalia
+                      '+27': { code: 'ZA', zone: 'Africa/Johannesburg' }, // South Africa
+                      '+82': { code: 'KR', zone: 'Asia/Seoul' }, // Korea (South)
+                      '+211': { code: 'SS', zone: 'Africa/Juba' }, // South Sudan
+                      '+34': { code: 'ES', zone: 'Europe/Madrid' }, // Spain
+                      '+94': { code: 'LK', zone: 'Asia/Colombo' }, // Sri Lanka
+                      '+249': { code: 'SD', zone: 'Africa/Khartoum' }, // Sudan
+                      '+597': { code: 'SR', zone: 'America/Paramaribo' }, // Suriname
+                      '+47': { code: 'SJ', zone: 'Arctic/Longyearbyen' }, // Svalbard and Jan Mayen Islands
+                      '+268': { code: 'SZ', zone: 'Africa/Mbabane' }, // Eswatini
+                      '+46': { code: 'SE', zone: 'Europe/Stockholm' }, // Sweden
+                      '+41': { code: 'CH', zone: 'Europe/Zurich' }, // Switzerland
+                      '+963': { code: 'SY', zone: 'Asia/Damascus' }, // Syrian Arab Republic
+                      '+886': { code: 'TW', zone: 'Asia/Taipei' }, // Taiwan, Republic of China
+                      '+992': { code: 'TJ', zone: 'Asia/Dushanbe' }, // Tajikistan
+                      '+255': { code: 'TZ', zone: 'Africa/Dar_es_Salaam' }, // Tanzania, United Republic of
+                      '+66': { code: 'TH', zone: 'Asia/Bangkok' }, // Thailand
+                      '+670': { code: 'TL', zone: 'Asia/Dili' }, // Timor-Leste
+                      '+228': { code: 'TG', zone: 'Africa/Lome' }, // Togo
+                      '+690': { code: 'TK', zone: 'Pacific/Fakaofo' }, // Tokelau
+                      '+676': { code: 'TO', zone: 'Pacific/Tongatapu' }, // Tonga
+                      '+1868': { code: 'TT', zone: 'America/Port_of_Spain' }, // Trinidad and Tobago
+                      '+216': { code: 'TN', zone: 'Africa/Tunis' }, // Tunisia
+                      '+90': { code: 'TR', zone: 'Europe/Istanbul' }, // Turkey
+                      '+993': { code: 'TM', zone: 'Asia/Ashgabat' }, // Turkmenistan
+                      '+1649': { code: 'TC', zone: 'America/Grand_Turk' }, // Turks and Caicos Islands
+                      '+688': { code: 'TV', zone: 'Pacific/Funafuti' }, // Tuvalu
+                      '+256': { code: 'UG', zone: 'Africa/Kampala' }, // Uganda
+                      '+380': { code: 'UA', zone: 'Europe/Kiev' }, // Ukraine
+                      '+971': { code: 'AE', zone: 'Asia/Dubai' }, // United Arab Emirates
+                      '+44': { code: 'GB', zone: 'Europe/London' }, // United Kingdom
+                      '+598': { code: 'UY', zone: 'America/Montevideo' }, // Uruguay
+                      '+1340': { code: 'VI', zone: 'America/St_Thomas' }, // US Virgin Islands
+                      '+998': { code: 'UZ', zone: 'Asia/Samarkand' }, // Uzbekistan
+                      '+678': { code: 'VU', zone: 'Pacific/Efate' }, // Vanuatu
+                      '+58': { code: 'VE', zone: 'America/Caracas' }, // Venezuela
+                      '+84': { code: 'VN', zone: 'Asia/Ho_Chi_Minh' }, // Viet Nam
+                      '+681': { code: 'WF', zone: 'Pacific/Wallis' }, // Wallis and Futuna Islands
+                      '+212': { code: 'EH', zone: 'Africa/El_Aaiun' }, // Western Sahara
+                      '+967': { code: 'YE', zone: 'Asia/Aden' }, // Yemen
+                      '+260': { code: 'ZM', zone: 'Africa/Lusaka' }, // Zambia
+                      '+263': { code: 'ZW', zone: 'Africa/Harare' }, // Zimbabwe
+
+                    // Add more mappings for other ISD codes as needed
+                };
+
+                // Retrieve the country code and time zone from the mapping based on the ISD code
+                        var mapping = isdCodeMappings[isdCode];
+                        var countryCode = '';
+                        var timeZone = '';
+                        if (mapping) {
+                            countryCode = mapping.code;
+                            timeZone = mapping.zone;
+                        }
+
+                        // Call the callback function with the country code and time zone
+                        callback(countryCode, timeZone);
+            } 
+        
+        
+        function createNewRow() {
+              // Get the table body element
+              var tableBody = document.getElementById('customerTable');
+
+              // Create a new row element
+              var newRow = document.createElement('tr');
+
+              // Create new cells for the row
+              var cell1 = document.createElement('td');
+              var cell2 = document.createElement('td');
+              var cell3 = document.createElement('td');
+              var cell4 = document.createElement('td');
+              var cell5 = document.createElement('td');
+              var cell6 = document.createElement('td');
+              var cell7 = document.createElement('td');
+              var cell8 = document.createElement('td');
+              var cell9 = document.createElement('td');
+              var cell10 = document.createElement('td');
+
+              // Set the content for each cell (you can modify this based on your data)
+              cell1.innerHTML = '<button class="edit-button" onclick="updateRow(this)">Edit</button> \
+                                <button class="cancel-button" onclick="cancelEdit(this)" style="display: none;">Cancel</button> \
+                                <button class="save-button" onclick="saveRow(this)" style="display: none;">Save</button>';
+              cell2.innerHTML = '<input type="text" class="editable" />';
+              cell3.innerHTML = '<input type="text" class="editable" />';
+              cell4.innerHTML = '<input type="text" class="editable" />';
+              cell5.innerHTML = '<input type="text" class="editable" />';
+              cell6.innerHTML = '<input type="text" class="editable" />';
+              cell7.innerHTML = '<input type="text" class="editable" />';
+              cell8.innerHTML = '<input type="text" class="editable" />';
+              cell9.innerHTML = '<input type="text" class="editable" />';
+              cell10.innerHTML = '<button class="deleteButton" onclick="deleteRow(this)">Delete</button>';
+
+              // Append the cells to the row
+              newRow.appendChild(cell1);
+              newRow.appendChild(cell2);
+              newRow.appendChild(cell3);
+              newRow.appendChild(cell4);
+              newRow.appendChild(cell5);
+              newRow.appendChild(cell6);
+              newRow.appendChild(cell7);
+              newRow.appendChild(cell8);
+              newRow.appendChild(cell9);
+              newRow.appendChild(cell10);
+
+              // Append the row to the table body
+              tableBody.appendChild(newRow);
+            }
+        
+        // Function to save the row data 
+            function saveRow(row) {
+              var cells = row.getElementsByTagName("input");
+
+              // Access and store the data entered in the cells
+              var data = {
+                cell1: cells[0].value,
+                cell2: cells[1].value,
+                cell3: cells[2].value,
+                cell4: cells[3].value,
+                cell5: cells[4].value,
+                cell6: cells[5].value,
+                cell7: cells[6].value,
+                cell8: cells[7].value,
+                cell9: cells[8].value,
+                cell10: cells[9].value,
+                  
+                // Add more properties for additional cells if needed
+              };
+
+              // Perform any necessary actions with the saved data
+              console.log("Saved Data:", data);
+            }
+
+            // Update the addRow function to include a Save button for each row
+            function addRow() {
+              var table = document.getElementById("customerTable").getElementsByTagName("tbody")[0];
+
+              // Create a new row and cells
+              var newRow = table.insertRow(table.rows.length);
+              var cell1 = newRow.insertCell(0);
+              var cell2 = newRow.insertCell(1);
+              var cell3 = newRow.insertCell(2); // Save button cell
+              var cell4 = newRow.insertCell(3);
+              var cell5 = newRow.insertCell(4);
+              var cell6 = newRow.insertCell(5);
+              var cell7 = newRow.insertCell(6);
+              var cell8 = newRow.insertCell(7);
+              var cell9 = newRow.insertCell(8);
+              var cell10 = newRow.insertCell(9);
+
+              // Set the content of the cells to be editable input fields
+              cell1.innerHTML = '<input type="text" class="editable" />';
+              cell2.innerHTML = '<input type="text" class="editable" />';
+
+              // Create a Save button for the row
+              var saveButton = document.createElement("button");
+              saveButton.textContent = "Save";
+              saveButton.addEventListener("click", function() {
+                saveRow(newRow);
+              });
+
+              // Append the Save button to the third cell of the row
+              cell3.appendChild(saveButton);
+
+              // Focus on the first input field of the new row
+              newRow.getElementsByTagName("input")[0].focus();
+            }
+
+
+        
+        
+    
+        function deleteEntry() {
+              // Your deleteEntry() function implementation goes here
+             }
+
+             // Create a unique identifier for the customer entry
+            var entryId = Date.now().toString(); // Example: using timestamp as the entry ID
+
+             // Create an object to represent the customer entry
+            var customerEntry = {
+                id: entryId,
+                customer: customer,
+                disposition: disposition,
+                remark: remark,
+                telephone: telephone
+            };
+
+             // Retrieve the existing customer list from local storage or create an empty array
+            var customerList = JSON.parse(localStorage.getItem("customerList")) || [];
+
+             // Add the new customer entry to the list
+            customerList.push(customerEntry);
+
+             // Save the updated customer list back to local storage
+            localStorage.setItem("customerList", JSON.stringify(customerList));
+        
+             // Initialize the datatable
+                    var table = new simpleDatatables.DataTable('#customerTable');
+
+                    function printTable() {
+                        table.print();
+                    }
+
+                    function exportToExcel() {
+                        var filename = 'customer_list.xlsx';
+
+                        // Get the table data
+                        var data = table.export({
+                            download: true,
+                            filename: filename,
+                            sheet: {
+                                name: 'Customer List'
+                            }
+                        });
+
+                        // Create a new workbook
+                        var workbook = XLSX.utils.book_new();
+
+                        // Add the worksheet
+                        var worksheet = XLSX.utils.json_to_sheet(data);
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Customer List');
+
+                        // Save the workbook as a file
+                        XLSX.writeFile(workbook, filename);
+                    }
+        
+            // Cancel button click handler
+            function cancelEdit(button) {
+                var tableRow = button.parentNode.parentNode;
+
+                // Hide cancel button and save button
+                tableRow.querySelector('.cancel-button').style.display = 'none';
+                tableRow.querySelector('.save-button').style.display = 'none';
+
+                // Show update button
+                tableRow.querySelector('.update-button').style.display = 'inline-block';
+
+                // Restore original values
+                var originalValues = JSON.parse(tableRow.dataset.originalValues);
+                var cells = tableRow.cells;
+
+                for (var i = 0; i < cells.length; i++) {
+                    var cell = cells[i];
+                    if (cell.classList.contains('editable-cell')) {
+                        cell.textContent = originalValues[i];
+                    }
+                }
+            }
+
+            // Update button click handler
+            function updateRow(button) {
+                var tableRow = button.parentNode.parentNode;
+
+                // Hide update button
+                button.style.display = 'none';
+
+                // Show cancel button and save button
+                tableRow.querySelector('.cancel-button').style.display = 'inline-block';
+                tableRow.querySelector('.save-button').style.display = 'inline-block';
+
+                // Replace text cells with input elements
+                var cells = tableRow.cells;
+
+                for (var i = 0; i < cells.length; i++) {
+                    var cell = cells[i];
+                    if (cell.classList.contains('editable-cell')) {
+                        var originalValue = cell.textContent;
+                        var input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = originalValue;
+                        cell.textContent = '';
+                        cell.appendChild(input);
+                    }
+                }
+            }
+
+            // Delete button click handler
+            function deleteRow(button) {
+                var tableRow = button.parentNode.parentNode;
+                var tableBody = tableRow.parentNode;
+                tableBody.removeChild(tableRow);
+
+                // Refresh the table
+                refreshTable();
+            }
+
+            // Save button click handler
+            function saveRow(button) {
+                var tableRow = button.parentNode.parentNode;
+                var cells = tableRow.cells;
+
+                for (var i = 0; i < cells.length; i++) {
+                    var cell = cells[i];
+                    if (cell.classList.contains('editable-cell')) {
+                        var input = cell.querySelector('input');
+                        cell.textContent = input.value;
+                    }
+                }
+
+                // Refresh the table
+                refreshTable();
+            }
+
+            // Function to refresh the table
+            function refreshTable() {
+                var table = document.querySelector('#customerTable');
+                var dataTable = new simpleDatatables.DataTable(table);
+            }
+            
+           // Function to print the table as an Excel file
+            function printExcel() {
+              var table = document.getElementById("customerList");
+              var sheet = XLSX.utils.table_to_sheet(table);
+              var workbook = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(workbook, sheet, "Customers");
+              XLSX.writeFile(workbook, "customer_list.xlsx");
+            }
+
+            // Function to save the table as an Excel file
+            function saveExcel() {
+              var table = document.getElementById("customerList");
+              var sheet = XLSX.utils.table_to_sheet(table);
+              var workbook = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(workbook, sheet, "Customers");
+              XLSX.writeFile(workbook, "customer_list.xlsx");
+            }
+        // Attach event listeners to the buttons
+            newRow.querySelector(".edit-button").addEventListener("click", function() {
+              updateRow(this);
+            });
+            newRow.querySelector(".cancel-button").addEventListener("click", function() {
+              cancelEdit(this);
+            });
+            newRow.querySelector(".save-button").addEventListener("click", function() {
+              saveRow(this);
+            });
+            newRow.querySelector(".deleteButton").addEventListener("click", function() {
+              deleteRow(this);
+            });
+
+
+
+
+             
+    </script>   
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        new simpleDatatables.DataTable("#customerTable");
+      });
+    </script>
+    
+    <script src="script.js"></script>
+        
+    <footer>
+      <p>&copy; 2023 P-@-War. All rights reserved.</p>
+      <p>Powered by Pawar</p>
+    </footer>    
+        
+        
+</div>
+    
+</body>
+</html>
